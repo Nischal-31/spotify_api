@@ -15,6 +15,7 @@ router = APIRouter(
 )
 
 UPLOAD_FOLDER = "app/static/music_files"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Ensure the upload folder exists
 
 @router.post("/", response_model=track_schema.TrackBase, dependencies=[Depends(get_current_admin_user)])
