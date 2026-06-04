@@ -11,26 +11,41 @@ jobs:
     environment: production
 
     steps:
-    # 1. Checkout code from the repository
+    # 1. Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Login to Docker Hub using secrets stored in GitHub
+    # 2. Set version tag (Git SHA)
+    - name: Set image tag
+      run: echo "TAG=${{ github.sha }}" >> $GITHUB_ENV
+
+    # 3. Login to Docker Hub
     - name: Login to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    # 3. Build Docker image
+    # 4. Build versioned image
     - name: Build image
       run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest .
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG .
 
-    # 4. Push to Docker Hub
-    - name: Push image
+    # 5. Push versioned image
+    - name: Push versioned image
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG
+
+    # 6. Tag latest
+    - name: Tag latest image
+      run: |
+        docker tag ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG \
+                   ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
+
+    # 7. Push latest
+    - name: Push latest image
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
 
-    # 5. Deploy on EC2
+    # 8. Deploy on EC2
     - name: Deploy on EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -53,5 +68,6 @@ jobs:
           docker run -d \
             --name spotify-api-container \
             -p 8000:8000 \
-            --env-file ~/app/.env \
+            --restart unless-stopped \
+            --env-file /home/ubuntu/app/.env \
             ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
