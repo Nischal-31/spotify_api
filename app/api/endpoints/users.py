@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models import user as user_model
 from app.schemas import user as user_schema
 from passlib.context import CryptContext
+from app.core.security import Hash
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -23,7 +24,7 @@ def create_user(request: user_schema.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Hash the password before storing it
-    hashed_password = pwd_context.hash(request.password)
+    hashed_password = Hash.bcrypt(request.password)
 
     # Create a new user instance and add it to the database
 

@@ -14,17 +14,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 # Password hashing utility
-class Hash():
+class Hash:
     @staticmethod
     def bcrypt(password: str):
-        """Hash a password using bcrypt."""
+        if len(password.encode("utf-8")) > 72:
+            raise ValueError("Password too long for bcrypt")
         return pwd_cxt.hash(password)
 
     @staticmethod
-    def verify(plain_password: str, hashed_password: str):
-        """Verify a password against a hashed password."""
-        return pwd_cxt.verify(plain_password, hashed_password)
-
+    def verify(plain, hashed):
+        return pwd_cxt.verify(plain, hashed)
 
 # Create JWT token
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
