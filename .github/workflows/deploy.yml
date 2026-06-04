@@ -11,7 +11,7 @@ jobs:
     environment: production
 
     steps:
-    # 1. Checkout code
+    # 1. Checkout code from GitHub
     - name: Checkout code
       uses: actions/checkout@v4
 
