@@ -1,4 +1,4 @@
-name: Deploy FastAPI to EC2 via Docker Hub
+name: Deploy Spotify API to EC2 via Docker Hub
 
 on:
   push:
@@ -23,12 +23,12 @@ jobs:
     # 3. Build Docker image
     - name: Build image
       run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/fastapi-app:latest .
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest .
 
     # 4. Push to Docker Hub
     - name: Push image
       run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-app:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
 
     # 5. Deploy on EC2
     - name: Deploy on EC2
@@ -43,15 +43,15 @@ jobs:
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
           echo "Pulling latest image"
-          docker pull ${{ secrets.DOCKER_USERNAME }}/fastapi-app:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
 
           echo "Stopping old container"
-          docker stop fastapi-container || true
-          docker rm fastapi-container || true
+          docker stop spotify-api-container || true
+          docker rm spotify-api-container || true
 
           echo "Running new container"
           docker run -d \
-            --name fastapi-container \
+            --name spotify-api-container \
             -p 8000:8000 \
             --env-file ~/app/.env \
-            ${{ secrets.DOCKER_USERNAME }}/fastapi-app:latest
+            ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
