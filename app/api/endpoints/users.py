@@ -22,7 +22,10 @@ def create_user(request: user_schema.UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(user_model.User).filter(user_model.User.email == request.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+    print("Password:", request.password)
+    print("Chars:", len(request.password))
+    print("Bytes:", len(request.password.encode("utf-8")))
+
     # Hash the password before storing it
     hashed_password = Hash.bcrypt(request.password)
 
