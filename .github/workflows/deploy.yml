@@ -1,73 +1,51 @@
-name: Deploy Spotify API to EC2 via Docker Hub
+name: Build and Deploy
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
-    # 1. Checkout code from GitHub
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # 2. Set version tag (Git SHA)
-    - name: Set image tag
-      run: echo "TAG=${{ github.sha }}" >> $GITHUB_ENV
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # 3. Login to Docker Hub
-    - name: Login to Docker Hub
-      run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/spotify-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/spotify-api:${{ github.sha }}
 
-    # 4. Build versioned image
-    - name: Build image
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG .
-
-    # 5. Push versioned image
-    - name: Push versioned image
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG
-
-    # 6. Tag latest
-    - name: Tag latest image
-      run: |
-        docker tag ${{ secrets.DOCKER_USERNAME }}/spotify-api:$TAG \
-                   ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
-
-    # 7. Push latest
-    - name: Push latest image
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
-
-    # 8. Deploy on EC2
-    - name: Deploy on EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-
-          echo "Logging into Docker Hub"
-          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
-          echo "Pulling latest image"
-          docker pull ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
-
-          echo "Stopping old container"
-          docker stop spotify-api-container || true
-          docker rm spotify-api-container || true
-
-          echo "Running new container"
-          docker run -d \
-            --name spotify-api-container \
-            -p 8000:8000 \
-            --restart unless-stopped \
-            --env-file /home/ubuntu/app/.env \
-            ${{ secrets.DOCKER_USERNAME }}/spotify-api:latest
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into EC2 and redeploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/spotify-api
+            cd ~/spotify-api
+            if [ ! -d .git ]; then
+              git init
+              git remote add origin https://github.com/Nischal-31/spotify_api.git
+            fi
+            git fetch origin master
+            git checkout -f master
+            git pull origin master
+            docker compose pull web
+            docker compose up -d
+            docker image prune –f
