@@ -97,7 +97,7 @@ spotify-api/
 ## Clone Repository
 
 ```bash
-git clone https://github.com/your-username/spotify-api.git
+git clone https://github.com/Nischal-31/spotify-api.git
 
 cd spotify-api
 ```
