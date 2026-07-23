@@ -6,7 +6,8 @@ python-dotenv
 pydantic
 pydantic-settings
 python-jose
-passlib
 python-multipart
 email-validator
-bcrypt
+
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
